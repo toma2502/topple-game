@@ -1,0 +1,8 @@
+{
+  "appId": "com.simplexdigital.topple",
+  "appName": "Topple!",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#141d38"
+  }
+}
