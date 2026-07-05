@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20315b"/><stop offset="1" stop-color="#141d38"/>
+    </linearGradient>
+    <linearGradient id="d1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e8dfc8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- fallen dominoes trail -->
+  <g transform="translate(180,690) rotate(78)"><rect x="-60" y="-170" width="120" height="340" rx="26" fill="#b9ad90"/></g>
+  <g transform="translate(345,640) rotate(52)"><rect x="-60" y="-170" width="120" height="340" rx="26" fill="#d3c7a8"/></g>
+  <g transform="translate(520,570) rotate(26)"><rect x="-60" y="-170" width="120" height="340" rx="26" fill="url(#d1)" stroke="#c9bfa8" stroke-width="8"/></g>
+  <!-- standing domino -->
+  <g transform="translate(730,500)">
+    <rect x="-70" y="-200" width="140" height="400" rx="28" fill="url(#d1)" stroke="#c9bfa8" stroke-width="10"/>
+    <line x1="-46" y1="0" x2="46" y2="0" stroke="#2b2b2b" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="0" cy="-100" r="22" fill="#2b2b2b"/>
+    <circle cx="-28" cy="90" r="22" fill="#2b2b2b"/>
+    <circle cx="28" cy="130" r="22" fill="#2b2b2b"/>
+  </g>
+  <text x="512" y="920" font-family="Arial Black, sans-serif" font-size="150" font-weight="900" fill="#ffd75e" text-anchor="middle" transform="rotate(-4 512 900)">TOPPLE!</text>
+</svg>
