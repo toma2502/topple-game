@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Topple!</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#141d38;
+    font-family:-apple-system,'Segoe UI',Roboto,sans-serif; color:#fff; }
+  #game-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+
+  .screen { position:absolute; inset:0; display:none; flex-direction:column; z-index:10; }
+  .screen.on { display:flex; }
+  .overlay { background:linear-gradient(180deg,#20315bee,#141d38f5); }
+
+  /* ---------- MENU ---------- */
+  #scr-menu { background:linear-gradient(180deg,#20315b,#141d38); align-items:center; justify-content:center; gap:18px; }
+  .logo { font-size:64px; font-weight:900; letter-spacing:-2px;
+    background:linear-gradient(180deg,#ffd75e,#ff9c40); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    transform:rotate(-4deg); text-shadow:none; }
+  .logo-dominoes { font-size:44px; letter-spacing:6px; margin-top:-10px; transform:rotate(-4deg); }
+  .menu-coins { position:absolute; top:calc(14px + env(safe-area-inset-top)); right:18px;
+    background:#0d1430; border-radius:20px; padding:8px 16px; font-weight:800; color:#ffd75e; }
+  .big-btn { width:min(78vw,340px); padding:20px; border:none; border-radius:22px;
+    background:linear-gradient(180deg,#3ecf72,#27a656); color:#fff; font-size:26px; font-weight:900;
+    box-shadow:0 6px 0 #1c7a3e; }
+  .big-btn:active { transform:translateY(4px); box-shadow:0 2px 0 #1c7a3e; }
+  .menu-row { display:flex; gap:14px; }
+  .sq-btn { width:76px; height:76px; border:none; border-radius:20px; background:#2a3b6b;
+    color:#fff; font-size:30px; box-shadow:0 4px 0 #0d1430; position:relative; }
+  .sq-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #0d1430; }
+  .sq-btn small { display:block; font-size:10px; font-weight:700; margin-top:2px; }
+  .pulse::after { content:''; position:absolute; top:6px; right:6px; width:14px; height:14px;
+    border-radius:50%; background:#ff5252; animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { transform:scale(1.35); } }
+
+  /* ---------- GAME HUD ---------- */
+  #scr-game { pointer-events:none; }
+  #scr-game > * { pointer-events:auto; }
+  .hud-top { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:0; right:0;
+    display:flex; align-items:center; gap:10px; padding:0 14px; }
+  #hud-level { font-weight:900; font-size:18px; background:#0d1430cc; padding:8px 14px; border-radius:16px; }
+  #hud-coins-wrap { margin-left:auto; background:#0d1430cc; padding:8px 14px; border-radius:16px;
+    font-weight:800; color:#ffd75e; }
+  #btn-quit { background:#0d1430cc; border:none; color:#8fa0cf; font-size:18px; border-radius:16px;
+    padding:8px 13px; }
+  .hud-bottom { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); left:0; right:0;
+    display:flex; align-items:center; gap:10px; padding:0 14px; }
+  .ink-wrap { flex:1; background:#0d1430cc; border-radius:18px; padding:9px 14px; }
+  .ink-bar { height:14px; background:#1c2647; border-radius:7px; overflow:hidden; margin-top:4px; }
+  #hud-ink-fill { height:100%; width:100%; border-radius:7px;
+    background:linear-gradient(90deg,#7ef2ff,#3ecf72); transition:width .15s; }
+  .ink-label { font-size:11px; font-weight:800; color:#8fa0cf; letter-spacing:1px; }
+  #hud-ink-num { color:#fff; }
+  #btn-undo,#btn-clear { width:56px; height:56px; border:none; border-radius:16px; background:#2a3b6b;
+    color:#fff; font-size:22px; box-shadow:0 3px 0 #0d1430; }
+  #btn-go { width:110px; height:56px; border:none; border-radius:16px;
+    background:linear-gradient(180deg,#ffd75e,#ff9c40); color:#4a2c00; font-size:22px; font-weight:900;
+    box-shadow:0 4px 0 #a05e14; }
+  #btn-go:disabled { filter:grayscale(.8); opacity:.6; }
+  #btn-go:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 #a05e14; }
+
+  /* ---------- RESULT ---------- */
+  #scr-result { align-items:center; justify-content:center; gap:16px; }
+  #res-title { font-size:52px; font-weight:900; }
+  .stars { display:flex; gap:12px; font-size:64px; }
+  .stars span { filter:grayscale(1) brightness(.5); transform:scale(.85); transition:all .3s cubic-bezier(.2,2,.4,1); }
+  .stars span.lit { filter:none; transform:scale(1.1); }
+  #res-coins { font-size:30px; font-weight:900; color:#ffd75e; }
+  .ad-btn { width:min(78vw,340px); padding:15px; border:none; border-radius:18px;
+    background:linear-gradient(180deg,#7ef2ff,#38b6d8); color:#04384a; font-size:18px; font-weight:900;
+    box-shadow:0 4px 0 #1a7a96; }
+  .ghost-btn { background:none; border:none; color:#8fa0cf; font-size:16px; font-weight:700; padding:10px; }
+
+  /* ---------- PANELS (shop/missions/daily/settings) ---------- */
+  .panel { background:linear-gradient(180deg,#20315b,#141d38); padding:calc(16px + env(safe-area-inset-top)) 16px 16px; overflow-y:auto; }
+  .panel h2 { font-size:26px; font-weight:900; margin:6px 0 14px; display:flex; align-items:center; }
+  .panel h3 { font-size:14px; letter-spacing:2px; color:#8fa0cf; margin:18px 0 8px; }
+  .btn-back { background:#2a3b6b; border:none; color:#fff; font-size:20px; border-radius:14px;
+    padding:8px 14px; margin-right:12px; }
+  .coins-chip { margin-left:auto; font-size:16px; color:#ffd75e; background:#0d1430; padding:6px 12px; border-radius:14px; }
+  .shop-row { display:flex; align-items:center; gap:12px; background:#1c2647; border-radius:16px;
+    padding:12px; margin-bottom:10px; }
+  .shop-ic { font-size:30px; }
+  .shop-info { flex:1; } .shop-info b { font-size:15px; } .shop-info small { color:#8fa0cf; display:block; }
+  .shop-info .lvl { color:#7ef2ff; font-size:12px; }
+  .buy { border:none; border-radius:12px; background:#3ecf72; color:#fff; font-weight:800;
+    padding:10px 14px; font-size:14px; min-width:74px; }
+  .buy.off { background:#2a3b6b; color:#8fa0cf; }
+  .mbar { height:8px; background:#0d1430; border-radius:4px; margin:6px 0 2px; overflow:hidden; }
+  .mbar i { display:block; height:100%; background:linear-gradient(90deg,#7ef2ff,#3ecf72); border-radius:4px; }
+  #shop-skins { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .skin-card { background:#1c2647; border-radius:16px; padding:12px; text-align:center; }
+  .skin-card.active { outline:2px solid #ffd75e; }
+  .skin-card b { display:block; font-size:13px; margin:8px 0; }
+  .skin-card .buy { width:100%; min-width:0; padding:8px; }
+  .skin-dom { width:26px; height:64px; border-radius:6px; border:2px solid; margin:0 auto; position:relative; }
+  .skin-dom i { position:absolute; width:8px; height:8px; border-radius:50%; top:12px; left:7px; }
+
+  /* ---------- DAILY ---------- */
+  #daily-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+  .daily-cell { background:#1c2647; border-radius:14px; padding:12px 6px; text-align:center; }
+  .daily-cell small { color:#8fa0cf; display:block; font-size:11px; }
+  .daily-cell b { color:#ffd75e; font-size:15px; }
+  .daily-cell em { display:block; font-size:10px; color:#7ef2ff; font-style:normal; font-weight:800; }
+  .daily-cell.cur { outline:2px solid #ffd75e; animation:pulse 1.2s infinite; }
+  .daily-cell.past { opacity:.4; }
+  #btn-claim-daily { width:100%; padding:16px; border:none; border-radius:18px; font-size:20px; font-weight:900;
+    background:linear-gradient(180deg,#ffd75e,#ff9c40); color:#4a2c00; box-shadow:0 4px 0 #a05e14; }
+  #btn-claim-daily:disabled { filter:grayscale(.8); opacity:.6; }
+
+  /* ---------- SETTINGS ---------- */
+  .set-row { display:flex; align-items:center; justify-content:space-between; background:#1c2647;
+    border-radius:16px; padding:16px; margin-bottom:10px; font-weight:700; }
+  .set-row input { width:24px; height:24px; }
+
+  /* ---------- AD STUB ---------- */
+  #scr-ad { background:#000; align-items:center; justify-content:center; gap:20px; z-index:50; }
+  #scr-ad .ad-box { font-size:22px; font-weight:900; color:#8fa0cf; text-align:center; }
+  #ad-count { font-size:70px; color:#ffd75e; }
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<!-- MENU -->
+<div class="screen on" id="scr-menu">
+  <div class="menu-coins"><span id="menu-coins">0</span> ⬤</div>
+  <div class="logo">TOPPLE!</div>
+  <div class="logo-dominoes">🁢🁢🁢</div>
+  <button class="big-btn" id="btn-play">PLAY LEVEL <span id="menu-level">1</span></button>
+  <div class="menu-row">
+    <button class="sq-btn" id="btn-shop">🛍️<small>SHOP</small></button>
+    <button class="sq-btn" id="btn-missions">🎯<small>GOALS</small></button>
+    <button class="sq-btn" id="btn-daily">🎁<small>DAILY</small></button>
+    <button class="sq-btn" id="btn-settings">⚙️<small>MORE</small></button>
+  </div>
+</div>
+
+<!-- GAME HUD -->
+<div class="screen" id="scr-game">
+  <div class="hud-top">
+    <button id="btn-quit">✕</button>
+    <div id="hud-level">LEVEL 1</div>
+    <div id="hud-coins-wrap"><span id="hud-coins">0</span> ⬤</div>
+  </div>
+  <div class="hud-bottom">
+    <button id="btn-undo">↩</button>
+    <button id="btn-clear">🗑</button>
+    <div class="ink-wrap">
+      <div class="ink-label">DOMINOES <span id="hud-ink-num">0</span></div>
+      <div class="ink-bar"><div id="hud-ink-fill"></div></div>
+    </div>
+    <button id="btn-go">GO!</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen overlay" id="scr-result">
+  <div id="res-title">NICE!</div>
+  <div class="stars"><span id="star1">⭐</span><span id="star2">⭐</span><span id="star3">⭐</span></div>
+  <div id="res-coins">+0</div>
+  <button class="ad-btn" id="btn-double">📺 &nbsp;DOUBLE COINS</button>
+  <button class="ad-btn" id="btn-continue-ad">📺 &nbsp;+8 DOMINOES — TRY AGAIN</button>
+  <button class="big-btn" id="btn-next">NEXT LEVEL ▶</button>
+  <button class="ghost-btn" id="btn-res-menu">Menu</button>
+</div>
+
+<!-- SHOP -->
+<div class="screen panel" id="scr-shop">
+  <h2><button class="btn-back">←</button> Shop <span class="coins-chip"><span id="shop-coins">0</span> ⬤</span></h2>
+  <h3>UPGRADES</h3>
+  <div id="shop-upgrades"></div>
+  <h3>DOMINO SKINS</h3>
+  <div id="shop-skins"></div>
+</div>
+
+<!-- MISSIONS -->
+<div class="screen panel" id="scr-missions">
+  <h2><button class="btn-back">←</button> Goals</h2>
+  <h3>DAILY MISSIONS</h3>
+  <div id="missions-list"></div>
+  <h3>ACHIEVEMENTS</h3>
+  <div id="ach-list"></div>
+</div>
+
+<!-- DAILY -->
+<div class="screen panel" id="scr-daily">
+  <h2><button class="btn-back">←</button> Daily Reward</h2>
+  <div id="daily-grid"></div>
+  <button id="btn-claim-daily">CLAIM</button>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen panel" id="scr-settings">
+  <h2><button class="btn-back">←</button> Settings</h2>
+  <div class="set-row">Sound <input type="checkbox" id="set-sound"></div>
+  <div class="set-row">Vibration <input type="checkbox" id="set-haptics"></div>
+</div>
+
+<!-- REWARDED AD STUB -->
+<div class="screen" id="scr-ad">
+  <div class="ad-box">AD<br><span id="ad-count">3</span><br><small>AdMob rewarded slot</small></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/save.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
